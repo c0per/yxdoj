@@ -1,0 +1,96 @@
+<% this.title = '练习' %>
+<% include header %>
+<div class="ui center aligned grid">
+    <div class="row">
+        <h1 class="ui header">
+            练习#<%= exercise.id %>. <%= exercise.title %>
+        </h1>
+    </div>
+    <div class="row" style="margin-top: -15px">
+        <% if (exercise.creator) { %>
+        <span class="ui label">创建者：<%= exercise.creator.username %></span>
+        <% } else { %>
+        <span class="ui label">未知创建者</span>
+        <% } %>
+    </div>
+</div>
+<div class="ui grid">
+    <div class="row">
+        <div class="column">
+            <div class="ui buttons">
+                <a class="small ui positive button" href="<%= syzoj.utils.makeUrl(['submissions'], {exercise: exercise.id}) %>">提交记录</a>
+                <a class="small ui orange button">统计</a>
+            </div>
+            <div class="ui buttons right floated">
+                <a class="small ui button" href="<%= syzoj.utils.makeUrl(['exercise', exercise.id, 'edit']) %>">编辑</a>
+                <% if (exercise.is_public) {  %>
+                <a class="small ui button" id="dis_public" href-post="<%= syzoj.utils.makeUrl(['exercise', exercise.id, 'dis_public']) %>">取消公开</a>
+                <% } else { %>
+                <a class="small ui button" id="public" href-post="<%= syzoj.utils.makeUrl(['exercise', exercise.id, 'public']) %>">公开</a>
+                <% } %>
+                <div class="ui basic modal" id="modal-delete">
+                    <div class="ui icon header">
+                        <i class="trash icon"></i>
+                        <p style="margin-top: 15px; ">删除题目</p>
+                    </div>
+                    <div class="content" style="text-align: center; ">
+                        <p>确认删除此练习吗？</p>
+                    </div>
+                    <div class="actions">
+                        <div class="ui red basic cancel inverted button">
+                            <i class="remove icon"></i>
+                            否
+                        </div>
+                        <a class="ui green ok inverted button" href-post="<%= syzoj.utils.makeUrl(['exercise', exercise.id, 'delete']) %>">
+                            <i class="checkmark icon"></i>
+                            是
+                        </a>
+                    </div>
+                </div>
+                <div class="small ui red button" onclick="$('#modal-delete').modal('show')">删除</div>
+            </div>
+        </div>
+    </div>
+</div>
+<% if (exercise.problems.length) { %>
+<table class="ui very basic center aligned table">
+    <thead>
+        <tr>
+            <% if (user) { %>
+            <th class="one wide">提交状态</th>
+            <% } %>
+            <th class="one wide"><%- createSortableTitle('id', '题目编号', true) %></th>
+            <th class="left aligned"><%- createSortableTitle('title', '题目名称', true) %></th>
+        </tr>
+    </thead>
+    <tbody>
+        <% for (let problem of exercise.problems) { %>
+        <tr>
+            <% if (user) { %>
+            <td>
+                <% if (problem.judge_state) { %>
+                <a href="<%= syzoj.utils.makeUrl(['submission', problem.judge_state.id]) %>">
+                    <span class="status <%= problem.judge_state.status.toLowerCase().split(' ').join('_') %>">
+                        <i class="<%= icon[problem.judge_state.status] || 'remove' %> icon"></i>
+                    </span>
+                </a>
+                <% } %>
+            </td>
+            <% } %>
+            <td><b><%= problem.id %></b></td>
+            <td class="left aligned">
+                <a style="vertical-align: middle; " href="<%= syzoj.utils.makeUrl(['problem', problem.id]) %>"><%= problem.title %></a>
+            </td>
+        </tr>
+        <% } %>
+    </tbody>
+</table>
+<% } else { %>
+<div class="ui placeholder segment">
+    <div class="ui icon header">
+        <i class="calendar icon" style="margin-bottom: 20px; "></i>
+        暂无题目
+    </div>
+</div>
+<% } %>
+<% include footer %>

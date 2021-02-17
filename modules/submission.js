@@ -3,6 +3,7 @@ let FormattedCode = syzoj.model('formatted_code');
 let User = syzoj.model('user');
 let Contest = syzoj.model('contest');
 let Problem = syzoj.model('problem');
+let Exercise = syzoj.model('exercise');
 
 const jwt = require('jsonwebtoken');
 const { getSubmissionInfo, getRoughResult, processOverallResult } = require('../libs/submissions_process');
@@ -22,6 +23,11 @@ const displayConfig = {
 // s is JudgeState
 app.get('/submissions', async (req, res) => {
   try {
+
+    if (req.query.contest && req.query.exercise) {
+        throw new Error('错误。');
+    }
+
     const curUser = res.locals.user;
 
     let query = JudgeState.createQueryBuilder();
@@ -38,9 +44,9 @@ app.get('/submissions', async (req, res) => {
       isFiltered = true;
     }
 
-    if (!req.query.contest) {
+    if (!req.query.contest && !req.query.exercise) {
       query.andWhere('type = 0');
-    } else {
+    } else if (req.query.contest) {
       const contestId = Number(req.query.contest);
       const contest = await Contest.findById(contestId);
       contest.ended = contest.isEnded();
@@ -53,6 +59,19 @@ app.get('/submissions', async (req, res) => {
       } else {
         throw new Error("您暂时无权查看此比赛的详细评测信息。");
       }
+    } else { // querying submissions for an exercise
+        const exerciseId = Number(req.query.exercise);
+        const exercise = await Exercise.findOne({
+            relations: ['problems', 'creator'],
+            where: { id: exerciseId }
+        });
+        // Q: what if exerciseId doesn't exist
+        if (exercise.is_public || exercise.creator.id === curUser.id || curUser.is_admin) {
+            query.andWhere('type = 0');
+            query.andWhere('problem_id IN (:...problem_ids)', { problem_ids: exercise.problems.map(p => p.id) });
+        } else {
+            throw new Error('您暂时无权查看此练习的详细评测信息。');
+        }
     }
 
     let minScore = parseInt(req.query.min_score);

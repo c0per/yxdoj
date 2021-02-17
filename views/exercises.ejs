@@ -1,0 +1,72 @@
+<% this.title = '练习' %>
+<% include header %>
+<div class="padding">
+    <% if (user && user.is_admin) { %>
+    <form class="ui mini form">
+      <div class="inline fields" style="margin-bottom: 25px; white-space: nowrap; ">
+        <a href="<%= syzoj.utils.makeUrl(['exercise', 0, 'edit']) %>" class="ui mini labeled icon right floated button" style="margin-left: auto; ">
+          <i class="ui icon write"></i>
+          添加练习
+        </a>
+     </div>
+    </form>
+    <% } %>
+    <% if (exercises.length) { %>
+    <div style="margin-bottom: 30px; ">
+        <% include page %>
+    </div>
+    <table class="ui very basic center aligned table">
+        <thead>
+            <tr>
+                <% if (user) { %>
+                <th class="one wide">通过状态</th>
+                <% } %>
+                <th class="one wide"><%- createSortableTitle('id', '编号', true) %></th>
+                <th class="left aligned"><%- createSortableTitle('title', '练习名称', true) %></th>
+            </tr>
+        </thead>
+        <tbody>
+            <% for (let exercise of exercises) { %>
+            <% if (exercise.is_public || user.is_admin || exercise.creator.id === user.id) { %>
+            <tr style="height: 44px; ">
+                <% if (user) { %>
+                <td>
+                    <% let acCnt = exercise.problems.filter(p => p.judge_state && p.judge_state.status === 'Accepted').length; %>
+                    <% if (acCnt === exercise.problems.length) { %>
+                    <span class="status accepted">
+                        <i class="checkmark icon"></i>
+                    </span>
+                    <% } else { %>
+                    <b><%= acCnt %>/<%= exercise.problems.length %></b>
+                    <% } %>
+                </td>
+                <% } %>
+                <td><b><%= exercise.id %></b></td>
+                <td class="left aligned">
+                    <a style="vertical-align: middle; " href="<%= syzoj.utils.makeUrl(['exercise', exercise.id]) %>"><%= exercise.title %>
+                        <% if (!exercise.is_public) { %><span class="ui header"><span class="ui tiny red label">未公开</span></span><% } %>
+                    </a>
+                </td>
+            </tr>
+            <% } %>
+            <% } %>
+        </tbody>
+    </table>
+    <div style="margin-bottom: 30px; ">
+        <% include page %>
+    </div>
+    <% } else { %>
+    <div class="ui placeholder segment">
+        <div class="ui icon header">
+            <% if (typeof req.query.keyword !== 'undefined') { %>
+            <i class="search icon" style="margin-bottom: 20px; "></i>
+            找不到符合条件的练习
+            <% } else { %>
+            <i class="list icon" style="margin-bottom: 20px; "></i>
+            暂无练习
+            <% } %>
+        </div>
+    </div>
+    <% } %>
+</div>
+<% include footer %>
