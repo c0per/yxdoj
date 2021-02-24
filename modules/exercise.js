@@ -1,4 +1,6 @@
 let Exercise = syzoj.model('exercise');
+let ExerciseTag = syzoj.model('exercise_tag');
+let ExerciseTagMap = syzoj.model('exercise_tag_map');
 let Problem = syzoj.model('problem');
 
 app.get('/exercises', async (req, res) => {
@@ -22,14 +24,78 @@ app.get('/exercises', async (req, res) => {
         }));
 
         await exercises.mapAsync(async e => {
+            e.tags = await e.getTags();
             await Promise.all(e.problems.map(async p => {
                 p.judge_state = await p.getJudgeState(res.locals.user, true);
             }));
         });
 
         res.render('exercises', {
+            allowedManageTag: res.locals.user && await res.locals.user.hasPrivilege('manage_exercise_tag'),
             exercises: exercises,
             paginate: paginate,
+            curSort: sort,
+            curOrder: order === 'asc'
+        });
+    } catch(e) {
+        syzoj.log(e);
+        res.render('error', {
+            err: e
+        });
+    }
+});
+
+app.get('/exercises/tag/:tagIDs', async (req, res) => {
+    try { 
+        let tagIDs = Array.from(new Set(req.params.tagIDs.split(',').map(x => parseInt(x))));
+        let tags = await tagIDs.mapAsync(async tagID => ExerciseTag.findById(tagID));
+        const sort = req.query.sort || 'id';
+        const order = req.query.order || 'asc'; // TODO: harcode -> config
+        if (!['id', 'title'].includes(sort) || !['asc', 'dasc'].includes(order)) {
+            throw new ErrorMessage('错误的排序参数。');
+        }
+        let sortVal = '`exercise`.`' + sort + '`';
+
+        for (let tag of tags) {
+            if (!tag) {
+                return res.redirect(syzoj.utils.makeUrl(['exercises']));
+            }
+        }
+
+        let sql = 'SELECT `id` FROM `exercise` WHERE\n';
+        for (let tagID of tagIDs) {
+            if (tagID !== tagIDs[0]) {
+                sql += 'AND\n';
+            }
+            sql += '`exercise`.`id` IN (SELECT `exercise_id` FROM `exercise_tag_map` WHERE `tag_id` = ' + tagID + ')';
+        }
+
+        if (!res.locals.user) {
+            sql += 'AND (`exercise`.`is_public` = 1)';
+        } else if (!await res.locals.user.hasPrivilege('manage_exercise')) {
+            sql += 'AND (`exercise`.`is_public` = 1 OR `exercise`.`user_id` = ' + res.locals.user.id + ')';
+        }
+
+        let paginate = syzoj.utils.paginate(await Exercise.countQuery(sql), req.query.page, 12); // TODO: hardcode -> config
+        let exercises = await Exercise.query(sql + `ORDER BY ${sortVal} ${order} ` + paginate.toSQL());
+
+        exercises = await exercises.mapAsync(async e => {
+            e = await Exercise.findOne({
+                where: { id: e.id },
+                relations: ['creator', 'problems']
+            });
+            e.tags = await e.getTags();
+            await Promise.all(e.problems.map(async p => {
+                p.judge_state = await p.getJudgeState(res.locals.user, true);
+            }));
+            return e;
+        });
+
+        res.render('exercises', {
+            allowedManageTag: res.locals.user && await res.locals.user.hasPrivilege('manage_exercise_tag'),
+            exercises,
+            tags,
+            paginate,
             curSort: sort,
             curOrder: order === 'asc'
         });
@@ -55,10 +121,13 @@ app.get('/exercise/:id/edit', async (req, res) => {
                 id: 0
             });
             exercise.problems = [];
+            exercise.tags = [];
+        } else {
+            exercise.tags = await exercise.getTags();
         }
 
         res.render('exercise_edit', {
-            exercise: exercise
+            exercise
         });
     } catch(e) {
         syzoj.log(e);
@@ -93,6 +162,15 @@ app.post('/exercise/:id/edit', async (req, res) => {
         });
 
         await exercise.save();
+
+        if (!req.body.tags) {
+            req.body.tags = [];
+        } else if (!Array.isArray(req.body.tags)) {
+            req.body.tags = [req.body.tags];
+        }
+
+        let newTagIDs = await req.body.tags.map(x => parseInt(x)).filterAsync(async x => ExerciseTag.findById(x));
+        await exercise.setTags(newTagIDs);
 
         res.redirect(syzoj.utils.makeUrl(['exercise', exercise.id]));
     } catch (e) {
