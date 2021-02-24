@@ -79,7 +79,9 @@
             <% } %>
             <td><b><%= problem.id %></b></td>
             <td class="left aligned">
-                <a style="vertical-align: middle; " href="<%= syzoj.utils.makeUrl(['problem', problem.id]) %>"><%= problem.title %></a>
+                <a style="vertical-align: middle; " href="<%= syzoj.utils.makeUrl(['problem', problem.id]) %>"><%= problem.title %>
+                    <% if (!problem.is_public) { %><span class="ui header"><span class="ui tiny red label">未公开</span></span><% } %>
+                </a>
             </td>
         </tr>
         <% } %>
