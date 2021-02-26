@@ -197,6 +197,11 @@ app.get('/exercise/:id', async (req, res) => {
         if (!exercise) throw new ErrorMessage('无此练习。');
         if (!exercise.is_public && (!res.locals.user || !res.locals.user.is_admin)) throw new ErrorMessage('练习未公开，请耐心等待 (´∀ `)');
 
+        if (!res.locals.user) {
+            exercise.problems = exercise.problems.filter(p => p.is_public);
+        } else if (!res.locals.user.is_admin) {
+            exercise.problems = exercise.problems.filter(p => p.is_public || p.user_id === res.locals.user.id);
+        }
         exercise.problems.sort((a, b) => a[sort] < b[sort] && order === 'asc' ? -1 : 1);
 
         exercise.allowedDetele = exercise.isAllowedDeleteBy(res.locals.user);
