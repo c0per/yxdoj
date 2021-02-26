@@ -17,11 +17,7 @@ app.get('/exercises', async (req, res) => {
         let paginate = syzoj.utils.paginate(await Exercise.countForPagination(query), req.query.page, 12); // TODO: hardcoded value -> config
         let exercises = await Exercise.queryPage(paginate, query);
 
-        // TODO: use query to load relations.
-        exercises = await exercises.mapAsync(e => Exercise.findOne({
-            relations: ['problems', 'creator'],
-            where: { id: e.id }
-        }));
+        exercises = await exercises.mapAsync(e => Exercise.findOne(e.id));
 
         await exercises.mapAsync(async e => {
             e.tags = await e.getTags();
@@ -80,10 +76,7 @@ app.get('/exercises/tag/:tagIDs', async (req, res) => {
         let exercises = await Exercise.query(sql + `ORDER BY ${sortVal} ${order} ` + paginate.toSQL());
 
         exercises = await exercises.mapAsync(async e => {
-            e = await Exercise.findOne({
-                where: { id: e.id },
-                relations: ['creator', 'problems']
-            });
+            e = await Exercise.findOne(e.id);
             e.tags = await e.getTags();
             await Promise.all(e.problems.map(async p => {
                 p.judge_state = await p.getJudgeState(res.locals.user, true);
@@ -110,10 +103,7 @@ app.get('/exercises/tag/:tagIDs', async (req, res) => {
 app.get('/exercise/:id/edit', async (req, res) => {
     try {
         let id = parseInt(req.params.id) || 0;
-        let exercise = await Exercise.findOne({
-            relations: ['problems'],
-            where: { id: id }
-        });
+        let exercise = await Exercise.findOne(id);
 
         if (!exercise) {
             if (!res.locals.user) throw new ErrorMessage('请登录后继续。', { '登录': syzoj.utils.makeUrl(['login'], { 'url': req.originalUrl }) });
@@ -190,10 +180,7 @@ app.get('/exercise/:id', async (req, res) => {
         }
 
         let exercise_id = parseInt(req.params.id);
-        let exercise = await Exercise.findOne({
-            relations: ['problems', 'creator'],
-            where: { id: exercise_id }
-        });
+        let exercise = await Exercise.findOne(exercise_id);
         if (!exercise) throw new ErrorMessage('无此练习。');
         if (!exercise.is_public && (!res.locals.user || !res.locals.user.is_admin)) throw new ErrorMessage('练习未公开，请耐心等待 (´∀ `)');
 

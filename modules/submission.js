@@ -61,10 +61,7 @@ app.get('/submissions', async (req, res) => {
       }
     } else { // querying submissions for an exercise
         const exerciseId = Number(req.query.exercise);
-        const exercise = await Exercise.findOne({
-            relations: ['problems', 'creator'],
-            where: { id: exerciseId }
-        });
+        const exercise = await Exercise.findOne(exerciseId);
         // Q: what if exerciseId doesn't exist
         if (exercise.is_public || exercise.creator.id === curUser.id || curUser.is_admin) {
             query.andWhere('type = 0');

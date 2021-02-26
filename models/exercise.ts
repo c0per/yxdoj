@@ -32,10 +32,10 @@ export default class Exercise extends Model {
     @TypeORM.Column({ nullable: true })
     is_public: boolean;
 
-    @TypeORM.ManyToOne(() => User)
+    @TypeORM.ManyToOne(type => User, { eager: true })
     creator: User;
 
-    @TypeORM.ManyToMany(() => Problem)
+    @TypeORM.ManyToMany(type => Problem, { eager: true })
     @TypeORM.JoinTable()
     problems: Problem[];
 
