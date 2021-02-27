@@ -73,6 +73,54 @@ app.get('/api/v2/search/problems/:keyword*?', async (req, res) => {
   }
 });
 
+app.get('/api/v2/search/exercises/:keyword*?', async (req, res) => {
+    try {
+        let Exercise = syzoj.model('exercise');
+        let keyword = req.params.keyword || '';
+        let exercises = await Exercise.find({
+            where: {
+                title: TypeORM.Like(`%${req.params.keyword}%`)
+            },
+            order: {
+                id: 'ASC'
+            }
+        });
+        let result = [];
+
+        let id = parseInt(keyword);
+        if (id) {
+            let exerciseById = await Exercise.findById(id);
+            if (exerciseById && (exerciseById.is_public || res.locals.user && res.locals.user.is_admin)) {
+                result.push(exerciseById);
+            }
+        }
+        exercises = exercises.filter(e => {
+            if (!res.locals.user) {
+                return e.is_public;
+            } else if (!res.locals.user.is_admin) {
+                return e.is_public || e.creator.id === res.locals.user.id;
+            } else {
+                return true;
+            }
+        });
+        await exercises.forEachAsync(async e => {
+            if (result.length < 10 && e.id !== id) {
+                result.push(e);
+            }
+        });
+
+        result = result.map(x => ({
+            name: `#${x.id}. ${x.title}`,
+            value: x.id,
+            url: syzoj.utils.makeUrl(['exercise', x.id])
+        }));
+        res.send({ success: true, results: result });
+    } catch (e) {
+        syzoj.log(e);
+        res.send({ success: false });
+    }
+});
+
 app.get('/api/v2/search/tags/:keyword*?', async (req, res) => {
   try {
     let Problem = syzoj.model('problem');

@@ -20,7 +20,15 @@ if (typeof tags !== 'undefined') {
                 </a>
                     <% } %>
                 <% } else { %>
-                <%# TODO: search %>
+                <form action="<%= syzoj.utils.makeUrl(['exercises', 'search']) %>" method="get">
+                    <div class="ui search" style="width: 280px; height: 28px; margin-top: -5.3px; ">
+                        <div class="ui left icon input" style="width: 100%; ">
+                            <input class="prompt" style="width: 100%; " type="text" value="<%= req.query.keyword %>" placeholder="ID / 练习名 …" name="keyword">
+                                <i class="search icon"></i>
+                        </div>
+                        <div class="results" style="width: 100%; "></div>
+                    </div>
+                </form>
                 <% } %>
             </div>
             <div class="nine wide right aligned column">
@@ -148,4 +156,18 @@ if (typeof tags !== 'undefined') {
     </div>
     <% } %>
 </div>
+<script>
+$(function () {
+    $('.ui.search').search({
+        debug: true,
+        apiSettings: {
+            url: '/api/v2/search/exercises/{query}',
+            cache: false
+        },
+        fields: {
+            title: 'name'
+        }
+    });
+});
+</script>
 <% include footer %>

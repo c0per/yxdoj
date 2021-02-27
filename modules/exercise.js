@@ -100,6 +100,66 @@ app.get('/exercises/tag/:tagIDs', async (req, res) => {
     }
 });
 
+app.get('/exercises/search', async (req, res) => {
+    try {
+        let id = parseInt(req.query.keyword) || 0;
+        const sort = req.query.sort || 'id';
+        const order = req.query.order || 'asc';
+        if (!['id', 'title'].includes(sort) || !['asc', 'desc'].includes(order)) {
+            throw new ErrorMessage('错误的排序参数。');
+        }
+
+        let query = Exercise.createQueryBuilder('exercise');
+        query.leftJoinAndSelect('exercise.creator', 'creator')
+            .leftJoinAndSelect('exercise.problems', 'problems');
+        if (!res.locals.user) {
+            query.where('exercise.is_public = 1')
+                .andWhere(new TypeORM.Brackets(qb => {
+                    qb.where('exercise.title LIKE :title', { title: `%${req.query.keyword}%` })
+                        .orWhere('exercise.id = :id', { id });
+                }));
+        } else if (!res.locals.user.is_admin) {
+            query.where(new TypeORM.Brackets(qb => {
+                qb.where('exercise.is_public = 1')
+                    .orWhere('creator.id = :user_id', { user_id: res.locals.user.id});
+            }))
+                .andWhere(new TypeORM.Brackets(qb => {
+                    qb.where('exercise.title LIKE :title', { title: `%${req.query.keyword}%` })
+                        .orWhere('exercise.id = :id', { id });
+                }))
+        } else {
+            query.where('exercise.title LIKE :title', { title: `%${req.query.keyword}%` })
+                .orWhere('exercise.id = :id', { id });
+        }
+
+        //TODO: show exerciseById first.
+        query.orderBy(`exercise.${sort}`, order.toUpperCase());
+
+        let paginate = syzoj.utils.paginate(await Exercise.countForPagination(query), req.query.page, 12); // TODO: hardcode -> config
+        let exercises = await Exercise.queryPage(paginate, query);
+
+        await exercises.mapAsync(async e => {
+            e.tags = await e.getTags();
+            await Promise.all(e.problems.map(async p => {
+                p.judge_state = await p.getJudgeState(res.locals.user, true);
+            }));
+        });
+
+        res.render('exercises', {
+            allowedManageTag: res.locals.user && await res.locals.user.hasPrivilege('manage_exercise_tag'),
+            exercises: exercises,
+            paginate: paginate,
+            curSort: sort,
+            curOrder: order === 'asc'
+        });
+    } catch(e) {
+        syzoj.log(e);
+        res.render('error', {
+            err: e
+        });
+    }
+});
+
 app.get('/exercise/:id/edit', async (req, res) => {
     try {
         let id = parseInt(req.params.id) || 0;
