@@ -35,7 +35,7 @@ export default class Exercise extends Model {
     @TypeORM.ManyToOne(type => User, { eager: true })
     creator: User;
 
-    @TypeORM.ManyToMany(type => Problem, { eager: true })
+    @TypeORM.ManyToMany(type => Problem, problem => problem.exercises, { eager: true })
     @TypeORM.JoinTable()
     problems: Problem[];
 

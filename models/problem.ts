@@ -10,6 +10,7 @@ import Contest from "./contest";
 import ProblemTag from "./problem_tag";
 import ProblemTagMap from "./problem_tag_map";
 import SubmissionStatistics, { StatisticsType } from "./submission_statistics";
+import Exercise from "./exercise";
 
 import * as fs from "fs-extra";
 import * as path from "path";
@@ -105,6 +106,9 @@ export default class Problem extends Model {
   @TypeORM.Index()
   @TypeORM.Column({ nullable: true, type: "datetime" })
   publicize_time: Date;
+
+  @TypeORM.ManyToMany(() => Exercise, exercise => exercise.problems)
+  exercises: Exercise[];
 
   @TypeORM.Column({ nullable: true,
       type: "enum",
