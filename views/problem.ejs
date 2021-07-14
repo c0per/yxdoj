@@ -7,7 +7,7 @@ if (contest) {
   this.title = problem.title + ' - 题目';
 }
 let hasTag = problem.tags && problem.tags.length && (typeof contest === 'undefined' || !contest);
-let hasExercise = problem.exercises.length > 0;
+let hasExercise = problem.exercises && problem.exercises.length;
 %>
 <% include header %>
 <style>
