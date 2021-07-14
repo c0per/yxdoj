@@ -4,6 +4,7 @@ let FormattedCode = syzoj.model('formatted_code');
 let Contest = syzoj.model('contest');
 let ProblemTag = syzoj.model('problem_tag');
 let Article = syzoj.model('article');
+let Exercise = syzoj.model('exercise');
 
 const randomstring = require('randomstring');
 const fs = require('fs-extra');
@@ -196,7 +197,10 @@ app.get('/problems/tag/:tagIDs', async (req, res) => {
 app.get('/problem/:id', async (req, res) => {
   try {
     let id = parseInt(req.params.id);
-    let problem = await Problem.findById(id);
+    let problem = await Problem.findOne({
+        where: { id },
+        relations: ['exercises', 'exercises.creator']
+    });
     if (!problem) throw new ErrorMessage('无此题目。');
 
     if (!await problem.isAllowedUseBy(res.locals.user)) {
@@ -220,6 +224,12 @@ app.get('/problem/:id', async (req, res) => {
     let testcases = await syzoj.utils.parseTestdata(problem.getTestdataPath(), problem.type === 'submit-answer');
 
     let discussionCount = await Article.count({ problem_id: id });
+
+    if (!res.locals.user) {
+        problem.exercises = problem.exercises.filter(e => e.is_public);
+    } else if (!res.locals.user.is_admin) {
+        problem.exercises = problem.exercises.filter(e => e.is_public || e.creator.id === res.locals.user.id);
+    }
 
     res.render('problem', {
       problem: problem,

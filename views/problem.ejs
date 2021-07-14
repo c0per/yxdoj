@@ -6,6 +6,8 @@ if (contest) {
 } else {
   this.title = problem.title + ' - 题目';
 }
+let hasTag = problem.tags && problem.tags.length && (typeof contest === 'undefined' || !contest);
+let hasExercise = problem.exercises && problem.exercises.length;
 %>
 <% include header %>
 <style>
@@ -184,8 +186,9 @@ if (contest) {
         </div>
     </div>
   <% } %>
-  <% if (problem.tags && problem.tags.length && (typeof contest === 'undefined' || !contest)) { %>
-    <div class="row">
+  <% if (hasTag || hasExercise) { %>
+    <div class="equal width row">
+        <% if (hasTag) { %>
       <div class="column">
         <h4 class="ui block header" id="show_tag_title_div" style="margin-bottom: 0; margin-left: -1px; margin-right: -1px; "><a href="#" id="show_tag_button" style="color: #000; ">显示分类标签</a></h4>
         <div class="ui bottom attached segment" style="display: none; " id="show_tag_div">
@@ -196,18 +199,18 @@ if (contest) {
           <% } %>
         </div>
       </div>
+      <% } %>
+      <% if (hasExercise) { %>
+      <div class="column">
+          <h4 class="ui block header" id="show_exercise_title_div" style="margin-bottom: 0; margin-left: -1px; margin-right: -1px; "><a href="#" id="show_exercise_button" style="color: #000; ">显示包含本题目的练习</a></h4>
+          <div class="ui bottom attached segment" style="display: none; " id="show_exercise_div">
+              <% for (let e of problem.exercises) { %>
+              <a href="<%= syzoj.utils.makeUrl(['exercise', e.id]) %>" class="ui medium grey label">#<%= e.id %>. <%= e.title %></a>
+              <% } %>
+          </div>
+      </div>
+      <% } %>
     </div>
-    <script>
-    $(function () {
-      $('#show_tag_button').click(function (e) {
-        e.preventDefault();
-        $('#show_tag_title_div').addClass('top');
-        $('#show_tag_title_div').addClass('top attached');
-        $('#show_tag_title_div').text('分类标签');
-        $('#show_tag_div').css('display', '');
-      })
-    });
-    </script>
   <% } %>
     <% let noSubmit = false; %>
     <%
@@ -389,4 +392,26 @@ if (contest) {
   }
   </script>
 <% } %>
+<script>
+$(function () {
+    $('#show_tag_button').click(function (e) {
+        e.preventDefault();
+        $('#show_tag_title_div').addClass('top');
+        $('#show_tag_title_div').addClass('top attached');
+        $('#show_tag_title_div').text('分类标签');
+        $('#show_tag_div').css('display', '');
+    })
+});
+</script>
+<script>
+$(function () {
+    $('#show_exercise_button').click(function (e) {
+        e.preventDefault();
+        $('#show_exercise_title_div').addClass('top');
+        $('#show_exercise_title_div').addClass('top attached');
+        $('#show_exercise_title_div').text('相关练习');
+        $('#show_exercise_div').css('display', '');
+    })
+});
+</script>
 <% include footer %>

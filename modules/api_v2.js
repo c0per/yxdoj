@@ -73,6 +73,54 @@ app.get('/api/v2/search/problems/:keyword*?', async (req, res) => {
   }
 });
 
+app.get('/api/v2/search/exercises/:keyword*?', async (req, res) => {
+    try {
+        let Exercise = syzoj.model('exercise');
+        let keyword = req.params.keyword || '';
+        let exercises = await Exercise.find({
+            where: {
+                title: TypeORM.Like(`%${req.params.keyword}%`)
+            },
+            order: {
+                id: 'ASC'
+            }
+        });
+        let result = [];
+
+        let id = parseInt(keyword);
+        if (id) {
+            let exerciseById = await Exercise.findById(id);
+            if (exerciseById && (exerciseById.is_public || res.locals.user && res.locals.user.is_admin)) {
+                result.push(exerciseById);
+            }
+        }
+        exercises = exercises.filter(e => {
+            if (!res.locals.user) {
+                return e.is_public;
+            } else if (!res.locals.user.is_admin) {
+                return e.is_public || e.creator.id === res.locals.user.id;
+            } else {
+                return true;
+            }
+        });
+        await exercises.forEachAsync(async e => {
+            if (result.length < 10 && e.id !== id) {
+                result.push(e);
+            }
+        });
+
+        result = result.map(x => ({
+            name: `#${x.id}. ${x.title}`,
+            value: x.id,
+            url: syzoj.utils.makeUrl(['exercise', x.id])
+        }));
+        res.send({ success: true, results: result });
+    } catch (e) {
+        syzoj.log(e);
+        res.send({ success: false });
+    }
+});
+
 app.get('/api/v2/search/tags/:keyword*?', async (req, res) => {
   try {
     let Problem = syzoj.model('problem');
@@ -96,6 +144,29 @@ app.get('/api/v2/search/tags/:keyword*?', async (req, res) => {
     syzoj.log(e);
     res.send({ success: false });
   }
+});
+
+app.get('/api/v2/search/etags/:keyword*?', async (req, res) => {
+    try {
+        let Exercise = syzoj.model('problem');
+        let ExerciseTag = syzoj.model('exercise_tag');
+
+        let keyword = req.params.keyword || '';
+        let tags = await ExerciseTag.find({
+            where: {
+                name: TypeORM.Like(`%${req.params.keyword}%`)
+            },
+            order: {
+                name: 'ASC'
+            }
+        });
+
+        let result = tags.slice(0, 10).map(x => ({ name: x.name, value: x.id })); //TODO: hardcode -> config
+        res.send({ success: true, results: result });
+    } catch (e) {
+        syzoj.log(e);
+        res.send({ success: false});
+    }
 });
 
 app.apiRouter.post('/api/v2/markdown', async (req, res) => {

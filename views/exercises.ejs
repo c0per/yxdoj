@@ -1,0 +1,173 @@
+<% this.title = '练习' %>
+<% include header %>
+<%
+let tagIDs = [];
+if (typeof tags !== 'undefined') {
+    tagIDs = tags.map(x => x.id);
+}
+%>
+<div class="padding">
+    <div class="ui grid" style="margin-bottom: 10px; ">
+        <div class="row" style="white-space: nowrap; ">
+            <div class="seven wide column">
+                <% if (typeof tags !== 'undefined') {
+                    tags.sort((a, b) => a.color > b.color ? 1 : -1);
+                    for (let tag of tags) {
+                        let tagListRemovedThisTag = tagIDs.filter(x => x != tag.id).sort().join(',');
+                        let url = tagListRemovedThisTag ? syzoj.utils.makeUrl(['exercises', 'tag', tagListRemovedThisTag]) : syzoj.utils.makeUrl(['exercises']); %>
+                <a href="<%= url %>" class="ui tiny <%= tag.color %> label">
+                    <%= tag.name %>
+                </a>
+                    <% } %>
+                <% } else { %>
+                <form action="<%= syzoj.utils.makeUrl(['exercises', 'search']) %>" method="get">
+                    <div class="ui search" style="width: 280px; height: 28px; margin-top: -5.3px; ">
+                        <div class="ui left icon input" style="width: 100%; ">
+                            <input class="prompt" style="width: 100%; " type="text" value="<%= req.query.keyword %>" placeholder="ID / 练习名 …" name="keyword">
+                                <i class="search icon"></i>
+                        </div>
+                        <div class="results" style="width: 100%; "></div>
+                    </div>
+                </form>
+                <% } %>
+            </div>
+            <div class="nine wide right aligned column">
+                <div class="ui toggle checkbox" id="show_tag">
+                    <style id="show_tag_style"></style>
+                    <script data-cfasync="false">
+                        if (localStorage.getItem('show_tag') === '1') {
+                            document.write('<input type="checkbox" checked>');
+                            document.getElementById('show_tag_style').innerHTML = '.show_tag_controled { white-space: nowrap; overflow: hidden; }';
+                        } else {
+                            document.write('<input type="checkbox">');
+                            document.getElementById('show_tag_style').innerHTML = '.show_tag_controled { width: 0; white-space: nowrap; overflow: hidden; }';
+                        }
+                    </script>
+
+                    <script>
+                        $(function () {
+                            $('#show_tag').checkbox('setting', 'onChange', function () {
+                            let checked = $('#show_tag').checkbox('is checked');
+                            localStorage.setItem('show_tag', checked ? '1' : '0');
+                            if (checked) {
+                                document.getElementById('show_tag_style').innerHTML = '.show_tag_controled { white-space: nowrap; overflow: hidden; }';
+                            } else {
+                                document.getElementById('show_tag_style').innerHTML = '.show_tag_controled { width: 0; white-space: nowrap; overflow: hidden; }';
+                            }
+                            });
+                        });
+                    </script>
+                    <label>显示分类标签</label>
+                </div>
+                <div style="margin-left: 10px; display: inline-block; ">
+                    <% if (allowedManageTag) { %>
+                        <% if (typeof tags !== 'undefined' && tags.length === 1) { %>
+                        <a style="margin-left: 10px; " href="<%= syzoj.utils.makeUrl(['exercises', 'tag', tags[0].id, 'edit']) %>" class="ui labeled icon mini blue button"><i class="write icon"></i> 编辑标签</a>
+                        <% } %>
+                    <a style="margin-left: 10px; " href="<%= syzoj.utils.makeUrl(['exercises', 'tag', 0, 'edit']) %>" class="ui labeled icon mini green button"><i class="plus icon"></i> 添加标签</a>
+                    <% } %>
+                    <%# TODO: check privilege in controller %>
+                    <% if (user && user.is_admin) { %>
+                    <div style="margin-left: 10px; " class="ui mini buttons">
+                        <a href="<%= syzoj.utils.makeUrl(['exercise', 0, 'edit']) %>" class="ui mini labeled icon right floated button" style="margin-left: auto; ">
+                            <i class="ui icon write"></i>添加练习
+                        </a>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    <% if (exercises.length) { %>
+    <div style="margin-bottom: 30px; ">
+        <% include page %>
+    </div>
+    <table class="ui very basic center aligned table">
+        <thead>
+            <tr>
+                <% if (user) { %>
+                <th class="one wide">通过状态</th>
+                <% } %>
+                <th class="one wide"><%- createSortableTitle('id', '编号', true) %></th>
+                <th class="left aligned"><%- createSortableTitle('title', '练习名称', true) %></th>
+            </tr>
+        </thead>
+        <tbody>
+            <% for (let exercise of exercises) { %>
+            <% if (exercise.is_public || user && (user.is_admin || exercise.creator.id === user.id)) { %>
+            <tr style="height: 44px; ">
+                <% if (user) { %>
+                <td>
+                    <% let acCnt = exercise.problems.filter(p => p.judge_state && p.judge_state.status === 'Accepted').length; %>
+                    <% if (acCnt === exercise.problems.length) { %>
+                    <span class="status accepted">
+                        <i class="checkmark icon"></i>
+                    </span>
+                    <% } else { %>
+                    <b><%= acCnt %>/<%= exercise.problems.length %></b>
+                    <% } %>
+                </td>
+                <% } %>
+                <td><b><%= exercise.id %></b></td>
+                <td class="left aligned">
+                    <a style="vertical-align: middle; " href="<%= syzoj.utils.makeUrl(['exercise', exercise.id]) %>"><%= exercise.title %>
+                        <% if (!exercise.is_public) { %><span class="ui header"><span class="ui tiny red label">未公开</span></span><% } %>
+                    </a>
+                    <div class="show_tag_controled" style="float: right; ">
+                        <% if (exercise.tags) {
+                            for (let tag of exercise.tags) {
+                                let tagListToggledThisTag;
+                                if (!tagIDs.includes(tag.id)) {
+                                    tagListToggledThisTag = tagIDs.concat([tag.id]);
+                                } else {
+                                    tagListToggledThisTag = tagIDs.filter(x => x != tag.id);
+                                }
+                                tagListToggledThisTag = tagListToggledThisTag.sort().join(',');
+                                let url = tagListToggledThisTag ? syzoj.utils.makeUrl(['exercises', 'tag', tagListToggledThisTag]) : syzoj.utils.makeUrl(['exercises']);
+                        %>
+                        <span class="ui header">
+                            <a href="<%= url %>" class="ui tiny <%= tag.color %> label"><%= tag.name %></a>
+                        </span>
+                        <%
+                            }
+                        }
+                        %>
+                    </div>
+                </td>
+            </tr>
+            <% } %>
+            <% } %>
+        </tbody>
+    </table>
+    <div style="margin-bottom: 30px; ">
+        <% include page %>
+    </div>
+    <% } else { %>
+    <div class="ui placeholder segment">
+        <div class="ui icon header">
+            <% if (typeof req.query.keyword !== 'undefined') { %>
+            <i class="search icon" style="margin-bottom: 20px; "></i>
+            找不到符合条件的练习
+            <% } else { %>
+            <i class="list icon" style="margin-bottom: 20px; "></i>
+            暂无练习
+            <% } %>
+        </div>
+    </div>
+    <% } %>
+</div>
+<script>
+$(function () {
+    $('.ui.search').search({
+        debug: true,
+        apiSettings: {
+            url: '/api/v2/search/exercises/{query}',
+            cache: false
+        },
+        fields: {
+            title: 'name'
+        }
+    });
+});
+</script>
+<% include footer %>
